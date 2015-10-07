@@ -1,0 +1,18 @@
+polityiv$partidemo[polityiv$parcomp == 5 & polityiv$exrec == 6] <- "1"
+polityiv$partidemo[polityiv$parcomp == 5 & polityiv$exrec == 7] <- "1"
+polityiv$partidemo[polityiv$parcomp == -66 ] <- "NA"
+polityiv$partidemo[polityiv$parcomp == -77 ] <- "NA"
+polityiv$partidemo[polityiv$parcomp == -88 ] <- "NA"
+polityiv$partidemo[is.na(polityiv$exrec)] <- "NA"
+# try with ifelse
+polityiv$partidemo <- ifelse(polityiv$parcomp == 2 & polityiv$exrec > 5 | polityiv$parcomp == 4 & polityiv$exrec > 5 | polityiv$parcomp == 5 & polityiv$exrec == 6 | polityiv$parcomp == 5 & polityiv$exrec == 7, 1, 0)
+
+#0 in Rgdpe.Pop auf NA setzen
+(XAV_begin[,3] = 0)
+XAV_begin[XAV_begin[,3] == 0] <- NA
+
+for (k in 1:7180){
+  if (superduper8[k,4] == 0) {
+    superduper8[k,4] <- NA
+  }
+}
