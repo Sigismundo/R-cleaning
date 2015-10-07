@@ -1,0 +1,145 @@
+# First Decision tree in R 
+library(rpart) 
+# continuous variable, such as age, you may use method=”anova”
+fit <- rpart(Survived ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked, data=train, method="class")
+# additional and important packages
+install.packages('rattle')
+install.packages('rpart.plot')
+install.packages('RColorBrewer')
+library(rattle)
+library(rpart.plot)
+library(RColorBrewer)
+fancyRpartPlot(fit1)
+# Feature Engineering
+test$Survived <- NA
+combi <- rbind(train, test)
+
+
+# make categories from the fares
+
+
+#make name a character
+
+combi$Name <- as.character(combi$Name)
+ combi$Name[1]
+# split the character
+strsplit(combi$Name[1], split='[,.]')
+
+# split out exactly the title of the name --> indexing
+
+combi$Title <- sapply(combi$Name, FUN=function(x) {strsplit(x, split='[,.]')[[1]][2]})
+ # strip off those spaces from the beginning of the titles
+
+combi$Title <- sub(' ', '', combi$Title)
+# make rare titles to english
+
+combi$Title[combi$Title %in% c('Mme', 'Mlle')] <- 'Mlle'
+# What have we done here? The %in% operator checks to 
+# see if a value is part of the vector we’re comparing it to
+
+combi$Title[combi$Title %in% c('Capt', 'Don', 'Major', 'Sir', 'Jonkheer', 'Dr','Col')] <- 'Sir'
+combi$Title[combi$Title %in% c('Dona', 'Lady', 'the Countess')] <- 'Lady'
+
+# make categories back to factors 
+
+combi$Title <- factor(combi$Title)
+
+# combine two categories
+
+combi$FamilySize <- combi$SibSp + combi$Parch + 1
+
+# surname isolate
+
+combi$Surname <- sapply(combi$Name, FUN=function(x) {strsplit(x, split='[,.]')[[1]][1]})
+# combine surname with familynumber
+
+combi$FamilyID <- paste(as.character(combi$FamilySize), combi$Surname, sep="")
+# render all lonely people as small
+
+combi$FamilyID[combi$FamilySize <= 2] <- 'Small'
+table(combi$FamilyID)
+
+# clean up the outliers
+
+famIDs <- data.frame(table(combi$FamilyID))
+famIDs <- famIDs[famIDs$Freq <= 2,]
+combi$FamilyID[combi$FamilyID %in% famIDs$Var1]
+<- 'Small'
+combi$FamilyID <- factor(combi$FamilyID)
+
+# make two datasets out of one
+
+train <- combi[1:891,]
+test <- combi[892:1309,]
+# do a decision tree
+fit1 <- rpart(Survived ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked + Title + FamilySize + FamilyID,
+              data=train,
+             method="class", control=rpart.control(minsplit=5, cp=0.006))
+fancyRpartPlot(fit1)
+# make some predictions
+Prediction <- predict(fit1, test, type = "class")
+submit <- data.frame(PassengerId = test$PassengerId, Survived = Prediction)
+write.csv(submit, file = "myfirstdtree.csv", row.names = FALSE)
+
+# use amelia to bootstrap values for age 
+combi$FamilyID3 <- combi$FamilyID
+combi$FamilyID3 <- as.character(combi$FamilyID3)
+combi$FamilyID3[combi$FamilySize <= 5] <- 'Small'
+combi$FamilyID3 <- factor(combi$FamilyID3)
+
+summary(combi$FamilyID3)
+
+summary(combi)
+str(combi)
+# noms = c( 'some', 'nominal', 'columns' )
+ords = c( 'and', 'ordinal', 'if', 'you', 'need', 'them' )
+idvars = c( 'these', 'will', 'be', 'ignored' )
+attach(combi)
+noms = c( 'FamilyID',  
+          'Embarked','Title','Sex')
+idvars = c( 'Survived', 'Cabin', 'Ticket', 'PassengerId', 'Name', 'Surname' )
+'Pclass', 'FamilySize'
+
+a.out1 = amelia(combi, m = 40, noms = c( 'Embarked','Sex', 'Title','FamilyID3'), idvars = c('FamilyID','FamilyID2', 'Survived', 
+                       'PassengerId', 'Name', 'Surname','Cabin', 'Ticket','FamilySize'), empri = 15)
+is.na(combi$Cabin)
+a.out = amelia( data, m = m, ..., )
+write.amelia( a.out, file.stem = output_file_stem )
+output_file_stem = 'train_and_test_imp'
+compare.density(a.out1, var = "Age")
+overimpute(a.out, var = "Age")
+missmap(a.out)
+
+imp1 <- a.out1[[1]][[c(2)]][c(1:18)][c(1:1309),]# --> #endlich  richtiger Zugriff nun noch mit lapply generalisieren
+# building first random forest with imp 1
+library(randomForest)
+set.seed(17) # has to be the same to reproduce examples
+imp1train<- imp1[c(1:891),]
+imp1test <- imp1 [c(892:1309),]
+fitrandom <- randomForest(as.factor(Survived) ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked + Title + FamilySize +
+                      FamilyID2, data=imp1train, importance=TRUE, ntree=2000)
+varImpPlot(fitrandom) # test of importance of variables
+Prediction <- predict(fitrandom, imp1test)
+submit <- data.frame(PassengerId = imp1test$PassengerId, Survived = Prediction)
+write.csv(submit, file = "firstconforest.csv", row.names = FALSE)
+
+# try a forest of conditional interest trees
+
+install.packages('party')
+install.packages('party')
+library(party)
+fit <- cforest(as.factor(Survived) ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked + Title + FamilySize + FamilyID,
+               data = imp1train, controls=cforest_unbiased(ntree=2000, mtry=3))
+
+Prediction <- predict(fit, imp1test, OOB=TRUE, type = "response")
+submit <- data.frame(PassengerId = imp1test$PassengerId, Survived = Prediction)
+
+
+
+mar$disc[mar$poldis_max == 4 | mar$ecdis_max == 4] <- "1"
+mar$disc[mar$poldis_max != 4 & mar$ecdis_max != 4] <- "0"
+> View(mar)
+
+#diligently do it with the mean
+mar$disc_mean[mar$poldis_mean == 4 | mar$ecdis_mean == 4] <- "1"
+mar$disc_mean[mar$poldis_mean != 4 & mar$ecdis_mean != 4] <- "0"
